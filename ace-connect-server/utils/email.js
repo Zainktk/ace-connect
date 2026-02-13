@@ -9,9 +9,9 @@ const transporter = nodemailer.createTransport({
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS, // App Password for Gmail or API Key for Brevo
     },
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
+    connectionTimeout: 8000, // 8 seconds
+    greetingTimeout: 8000,
+    socketTimeout: 8000,
 });
 
 /**
