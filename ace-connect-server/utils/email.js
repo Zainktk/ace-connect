@@ -9,6 +9,9 @@ const transporter = nodemailer.createTransport({
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS, // App Password for Gmail or API Key for Brevo
     },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
 });
 
 /**
@@ -20,7 +23,7 @@ const transporter = nodemailer.createTransport({
 const sendOTPEmail = async (to, otp, name) => {
     try {
         const mailOptions = {
-            from: `"AceConnect" <no-reply@ace.com>`,
+            from: `"AceConnect" <${process.env.EMAIL_USER}>`,
             to,
             subject: 'AceConnect Verification Code',
             text: `Hello ${name}, your OTP for your account verification is ${otp}`,

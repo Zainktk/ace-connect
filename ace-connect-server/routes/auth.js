@@ -62,17 +62,19 @@ router.post('/register', [
             [user.id, name, ntrpRating || null, req.body.location || null]
         );
 
-        // Send OTP Email
+        // Send OTP Email (Non-blocking or at least handled)
         const emailSent = await sendOTPEmail(email, otp, name);
 
         res.status(201).json({
-            message: 'Registration successful. Please verify your email.',
+            message: emailSent
+                ? 'Registration successful. Please check your email for the code.'
+                : 'Registration successful. (Email service busy, please ask for a new code in a minute).',
             email,
-            emailSent // Metadata for debugging/dev
+            emailSent
         });
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(500).json({ error: 'Server error during registration' });
+        res.status(500).json({ error: error.message || 'Server error during registration' });
     }
 });
 
