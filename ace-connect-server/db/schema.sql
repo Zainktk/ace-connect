@@ -73,6 +73,27 @@ CREATE TABLE IF NOT EXISTS matches (
     CONSTRAINT different_players CHECK (player1_id != player2_id)
 );
 
+-- Match reviews table for ratings
+CREATE TABLE IF NOT EXISTS match_reviews (
+    id SERIAL PRIMARY KEY,
+    match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    reviewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subject_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT different_users_review CHECK (reviewer_id != subject_id)
+);
+
+-- Messages table for chat
+CREATE TABLE IF NOT EXISTS messages (
+    id SERIAL PRIMARY KEY,
+    match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_match_requests_user_id ON match_requests(user_id);
@@ -84,6 +105,9 @@ CREATE INDEX IF NOT EXISTS idx_match_invitations_status ON match_invitations(sta
 CREATE INDEX IF NOT EXISTS idx_matches_player1 ON matches(player1_id);
 CREATE INDEX IF NOT EXISTS idx_matches_player2 ON matches(player2_id);
 CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
+CREATE INDEX IF NOT EXISTS idx_match_reviews_match ON match_reviews(match_id);
+CREATE INDEX IF NOT EXISTS idx_match_reviews_subject ON match_reviews(subject_id);
+CREATE INDEX IF NOT EXISTS idx_messages_match ON messages(match_id);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
