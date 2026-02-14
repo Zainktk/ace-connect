@@ -7,11 +7,11 @@ const https = require('https');
  * @param {string} name - User's name
  */
 const sendOTPEmail = async (to, otp, name) => {
-    const apiKey = process.env.EMAIL_PASS;
+    const apiKey = process.env.BREVO_API_KEY || process.env.EMAIL_PASS;
     const senderEmail = process.env.EMAIL_USER;
 
     if (!apiKey || !senderEmail) {
-        console.error('Email configuration missing (EMAIL_PASS or EMAIL_USER)');
+        console.error('Email configuration missing (BREVO_API_KEY or EMAIL_USER)');
         return false;
     }
 
