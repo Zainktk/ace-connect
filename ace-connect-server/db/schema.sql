@@ -1,4 +1,5 @@
 -- AceConnect Database Schema - Final Comprehensive Version
+-- COPY AND PASTE ALL OF THIS INTO SUPABASE SQL EDITOR
 
 -- 1. Users table for authentication
 CREATE TABLE IF NOT EXISTS users (
@@ -9,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     otp_expires_at TIMESTAMP,
     is_verified BOOLEAN DEFAULT FALSE,
     is_banned BOOLEAN DEFAULT FALSE,
+    role VARCHAR(50) DEFAULT 'player' CHECK (role IN ('player', 'organizer', 'admin')), -- ADDED
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -21,6 +23,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     ntrp_rating DECIMAL(2,1) CHECK (ntrp_rating >= 1.0 AND ntrp_rating <= 7.0),
     bio TEXT,
     location VARCHAR(255),
+    latitude FLOAT, -- ADDED
+    longitude FLOAT, -- ADDED
     photo_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -122,6 +126,34 @@ CREATE TABLE IF NOT EXISTS blocked_users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT different_users_block CHECK (blocker_id != blocked_id),
     CONSTRAINT unique_block UNIQUE (blocker_id, blocked_id)
+);
+
+-- 10. NEW: Events Table
+CREATE TABLE IF NOT EXISTS events (
+  id SERIAL PRIMARY KEY,
+  organizer_id INTEGER REFERENCES users(id),
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  event_date TIMESTAMP NOT NULL,
+  location VARCHAR(255) NOT NULL,
+  latitude FLOAT,
+  longitude FLOAT,
+  price DECIMAL(10, 2) DEFAULT 0,
+  max_participants INTEGER,
+  skill_level_min FLOAT,
+  skill_level_max FLOAT,
+  image_url TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 11. NEW: Event Participants Table
+CREATE TABLE IF NOT EXISTS event_participants (
+  id SERIAL PRIMARY KEY,
+  event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  status VARCHAR(50) DEFAULT 'registered',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(event_id, user_id)
 );
 
 -- Indexes for performance
