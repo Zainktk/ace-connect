@@ -7,6 +7,10 @@ const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const matchmakingRoutes = require('./routes/matchmaking');
 const userRoutes = require('./routes/users');
+const notificationService = require('./services/notificationService');
+
+// Initialize Firebase Admin for Push Notifications
+notificationService.initialize();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -88,6 +92,31 @@ io.on('connection', (socket) => {
             );
             const newMessage = result.rows[0];
             io.to(`match_${matchId}`).emit('new_message', newMessage);
+
+            // Get match participants to find recipient
+            const matchResult = await pool.query(
+                'SELECT player1_id, player2_id FROM matches WHERE id = $1',
+                [matchId]
+            );
+
+            if (matchResult.rows[0]) {
+                const match = matchResult.rows[0];
+                const recipientId = match.player1_id === senderId ? match.player2_id : match.player1_id;
+
+                // Get sender's name
+                const senderProfile = await pool.query(
+                    'SELECT name FROM profiles WHERE user_id = $1',
+                    [senderId]
+                );
+
+                if (senderProfile.rows[0]) {
+                    notificationService.sendMessageNotification(
+                        recipientId,
+                        senderProfile.rows[0].name,
+                        content
+                    );
+                }
+            }
         } catch (err) {
             console.error('Socket message error:', err);
         }

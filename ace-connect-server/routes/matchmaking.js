@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult, query } = require('express-validator');
 const authMiddleware = require('../middleware/auth');
 const { calculateMatchScore, isWithinSkillRange } = require('../utils/matchmaking');
+const notificationService = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -309,6 +310,20 @@ router.post('/invitations', authMiddleware, [
              RETURNING *`,
             [matchRequestId, req.user.id, matchRequest.user_id, message]
         );
+
+        // Get sender's name for notification
+        const senderProfile = await pool.query(
+            'SELECT name FROM profiles WHERE user_id = $1',
+            [req.user.id]
+        );
+
+        // Send push notification to recipient
+        if (senderProfile.rows[0]) {
+            notificationService.sendInvitationNotification(
+                matchRequest.user_id,
+                senderProfile.rows[0].name
+            );
+        }
 
         res.status(201).json(result.rows[0]);
     } catch (error) {

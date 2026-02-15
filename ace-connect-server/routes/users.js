@@ -75,4 +75,33 @@ router.post('/block', authMiddleware, [
     }
 });
 
+/**
+ * @route   PUT /api/users/fcm-token
+ * @desc    Update user's FCM Push Notification Token
+ * @access  Private
+ */
+router.put('/fcm-token', authMiddleware, [
+    body('token').notEmpty().withMessage('Token is required')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { token } = req.body;
+        const pool = req.app.get('db');
+
+        await pool.query(
+            'UPDATE users SET fcm_token = $1 WHERE id = $2',
+            [token, req.user.id]
+        );
+
+        res.json({ message: 'FCM token updated successfully' });
+    } catch (error) {
+        console.error('Update FCM token error:', error.message);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 module.exports = router;

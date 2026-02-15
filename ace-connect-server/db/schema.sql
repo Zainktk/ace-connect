@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
     otp_expires_at TIMESTAMP,
     is_verified BOOLEAN DEFAULT FALSE,
     is_banned BOOLEAN DEFAULT FALSE,
-    role VARCHAR(50) DEFAULT 'player' CHECK (role IN ('player', 'organizer', 'admin')), -- ADDED
+    role VARCHAR(50) DEFAULT 'player' CHECK (role IN ('player', 'organizer', 'admin')),
+    fcm_token TEXT, -- ADDED for Push Notifications
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
