@@ -27,7 +27,7 @@ router.post('/register', [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { email, password, name, ntrpRating } = req.body;
+        const { email, password, name, ntrpRating, role, latitude, longitude } = req.body;
         const pool = req.app.get('db');
 
         // Check if user already exists
@@ -47,19 +47,20 @@ router.post('/register', [
         // Generate OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        console.log('--- GENERATED OTP:', otp, '---'); // For local dev
 
         // Create user
         const userResult = await pool.query(
-            'INSERT INTO users (email, password_hash, otp_code, otp_expires_at) VALUES ($1, $2, $3, $4) RETURNING id, email, created_at',
-            [email, passwordHash, otp, otpExpiresAt]
+            'INSERT INTO users (email, password_hash, otp_code, otp_expires_at, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, created_at',
+            [email, passwordHash, otp, otpExpiresAt, role || 'player']
         );
 
         const user = userResult.rows[0];
 
         // Create profile
         await pool.query(
-            'INSERT INTO profiles (user_id, name, ntrp_rating, location) VALUES ($1, $2, $3, $4)',
-            [user.id, name, ntrpRating || null, req.body.location || null]
+            'INSERT INTO profiles (user_id, name, ntrp_rating, location, latitude, longitude) VALUES ($1, $2, $3, $4, $5, $6)',
+            [user.id, name, ntrpRating || null, req.body.location || null, latitude || null, longitude || null]
         );
 
         // Send OTP Email (Non-blocking or at least handled)
@@ -99,7 +100,7 @@ router.post('/login', [
 
         // Find user
         const userResult = await pool.query(
-            'SELECT id, email, password_hash, is_verified, is_banned FROM users WHERE email = $1',
+            'SELECT id, email, password_hash, is_verified, is_banned, role FROM users WHERE email = $1',
             [email]
         );
 
@@ -131,7 +132,7 @@ router.post('/login', [
 
         // Get profile and karma
         const profileResult = await pool.query(
-            `SELECT p.name, p.ntrp_rating, p.bio, p.location, p.photo_url,
+            `SELECT p.name, p.ntrp_rating, p.bio, p.location, p.photo_url, p.latitude, p.longitude,
              (SELECT AVG(rating)::FLOAT FROM match_reviews WHERE subject_id = $1) as karma_rating,
              (SELECT COUNT(*) FROM match_reviews WHERE subject_id = $1) as review_count
              FROM profiles p WHERE p.user_id = $1`,
@@ -158,7 +159,13 @@ router.post('/login', [
                 location: profile?.location,
                 photoUrl: profile?.photo_url,
                 karmaRating: profile?.karma_rating || 5.0,
-                reviewCount: parseInt(profile?.review_count) || 0
+                photoUrl: profile?.photo_url,
+                karmaRating: profile?.karma_rating || 5.0,
+                reviewCount: parseInt(profile?.review_count) || 0,
+                reviewCount: parseInt(profile?.review_count) || 0,
+                role: user.role || 'player',
+                latitude: profile?.latitude,
+                longitude: profile?.longitude
             }
         });
     } catch (error) {
@@ -273,9 +280,10 @@ router.get('/me', authMiddleware, async (req, res) => {
 
         // Get user, profile and karma
         const result = await pool.query(
-            `SELECT u.id, u.email, p.name, p.ntrp_rating, p.bio, p.location, p.photo_url,
+            `SELECT u.id, u.email, p.name, p.ntrp_rating, p.bio, p.location, p.photo_url, p.latitude, p.longitude,
              (SELECT AVG(rating)::FLOAT FROM match_reviews WHERE subject_id = u.id) as karma_rating,
-             (SELECT COUNT(*) FROM match_reviews WHERE subject_id = u.id) as review_count
+             (SELECT COUNT(*) FROM match_reviews WHERE subject_id = u.id) as review_count,
+             u.role
              FROM users u
              LEFT JOIN profiles p ON u.id = p.user_id
              WHERE u.id = $1`,
@@ -297,7 +305,11 @@ router.get('/me', authMiddleware, async (req, res) => {
             location: user.location,
             photoUrl: user.photo_url,
             karmaRating: user.karma_rating || 5.0,
-            reviewCount: parseInt(user.review_count) || 0
+            reviewCount: parseInt(user.review_count) || 0,
+            reviewCount: parseInt(user.review_count) || 0,
+            role: user.role || 'player',
+            latitude: user.latitude,
+            longitude: user.longitude
         });
     } catch (error) {
         console.error('Get user error:', error);

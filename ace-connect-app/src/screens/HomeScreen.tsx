@@ -7,6 +7,7 @@ import api from '../services/api';
 const HomeScreen = ({ navigation }: any) => {
     const { user } = useAuth();
     const [matches, setMatches] = useState<any[]>([]);
+    const [myEvents, setMyEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Review Modal State
@@ -17,15 +18,21 @@ const HomeScreen = ({ navigation }: any) => {
     const [submittingReview, setSubmittingReview] = useState(false);
 
     useEffect(() => {
-        fetchMatches();
-    }, []);
+        fetchData();
+    }, [user?.role]);
 
-    const fetchMatches = async () => {
+    const fetchData = async () => {
+        setLoading(true);
         try {
-            const response = await api.get('/matchmaking/matches/my');
-            setMatches(response.data);
+            if (user?.role === 'organizer') {
+                const response = await api.get('/events');
+                setMyEvents(response.data);
+            } else {
+                const response = await api.get('/matchmaking/matches/my');
+                setMatches(response.data);
+            }
         } catch (error) {
-            console.error('Fetch matches error:', error);
+            console.error('Fetch data error:', error);
         } finally {
             setLoading(false);
         }
@@ -49,7 +56,7 @@ const HomeScreen = ({ navigation }: any) => {
             setReviewModalVisible(false);
             setFeedback('');
             setRating(5);
-            fetchMatches(); // Refresh data
+            fetchData(); // Refresh data
         } catch (error) {
             console.error('Review submission error:', error);
             Alert.alert('Error', 'Failed to submit review.');
@@ -70,14 +77,14 @@ const HomeScreen = ({ navigation }: any) => {
         <ScrollView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.greeting}>Welcome back,</Text>
-                <Text style={styles.name}>{user?.name || 'Tennis Player'}!</Text>
+                <Text style={styles.name}>{user?.name || (user?.role === 'organizer' ? 'Organizer' : 'Tennis Player')}!</Text>
             </View>
 
             <View style={styles.statsContainer}>
                 {/* ... existing stats ... */}
             </View>
 
-            {pendingReviews.length > 0 && (
+            {pendingReviews.length > 0 && user?.role !== 'organizer' && (
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: colors.warning }]}>⭐ Pending Reviews</Text>
                     {pendingReviews.map((match) => (
@@ -97,51 +104,89 @@ const HomeScreen = ({ navigation }: any) => {
             )}
 
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>📅 Upcoming Matches</Text>
+                <Text style={styles.sectionTitle}>
+                    {user?.role === 'organizer' ? '📅 My Upcoming Events' : '📅 Upcoming Matches'}
+                </Text>
+
                 {loading ? (
                     <ActivityIndicator size="small" color={colors.primary.green} />
-                ) : upcomingMatches.length > 0 ? (
-                    upcomingMatches.map((match) => (
-                        <View key={match.id} style={styles.matchCard}>
-                            <View style={styles.matchInfo}>
-                                <Text style={styles.opponentName}>vs {match.opponent_name}</Text>
-                                <Text style={styles.matchDetails}>
-                                    {match.match_type.toUpperCase()} • {typeof match.opponent_rating === 'number' ? match.opponent_rating.toFixed(1) : 'N/A'}
-                                </Text>
-                                <Text style={styles.matchLocation}>📍 {match.location || 'TBA'}</Text>
-                                <Text style={styles.matchTime}>
-                                    🕒 {match.scheduled_time
-                                        ? new Date(match.scheduled_time).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
-                                        : 'Time TBD'}
-                                </Text>
+                ) : user?.role === 'organizer' ? (
+                    // ORGANIZER VIEW: Events List
+                    myEvents.length > 0 ? (
+                        myEvents.map((event) => (
+                            <View key={event.id} style={styles.matchCard}>
+                                <View style={styles.matchInfo}>
+                                    <Text style={styles.opponentName}>{event.title}</Text>
+                                    <Text style={styles.matchDetails}>
+                                        {event.participant_count} Participants
+                                    </Text>
+                                    <Text style={styles.matchLocation}>📍 {event.location || 'TBA'}</Text>
+                                    <Text style={styles.matchTime}>
+                                        🕒 {new Date(event.event_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                    </Text>
+                                </View>
+                                <View style={[styles.statusBadge, { backgroundColor: '#E0F2FE' }]}>
+                                    <Text style={[styles.statusText, { color: '#0369A1' }]}>
+                                        HOST
+                                    </Text>
+                                </View>
                             </View>
-                            <View style={[styles.statusBadge, { backgroundColor: match.status === 'accepted' ? '#D1FAE5' : '#FEF3C7' }]}>
-                                <Text style={[styles.statusText, { color: match.status === 'accepted' ? '#065F46' : '#92400E' }]}>
-                                    {match.status.toUpperCase()}
-                                </Text>
-                            </View>
-                            {match.status === 'accepted' && (
-                                <TouchableOpacity
-                                    style={styles.chatButton}
-                                    onPress={() => navigation.navigate('Chat', {
-                                        matchId: match.id,
-                                        opponentName: match.opponent_name
-                                    })}
-                                >
-                                    <Text style={styles.chatButtonText}>💬 Chat</Text>
-                                </TouchableOpacity>
-                            )}
+                        ))
+                    ) : (
+                        <View style={styles.emptyCard}>
+                            <Text style={styles.emptyText}>You haven't created any events yet.</Text>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('CreateEvent')}
+                            >
+                                <Text style={styles.linkText}>Host your first event 🎾</Text>
+                            </TouchableOpacity>
                         </View>
-                    ))
+                    )
                 ) : (
-                    <View style={styles.emptyCard}>
-                        <Text style={styles.emptyText}>No matches scheduled yet.</Text>
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('MainTabs', { screen: 'Matchmaking' })}
-                        >
-                            <Text style={styles.linkText}>Find a partner 🎾</Text>
-                        </TouchableOpacity>
-                    </View>
+                    // PLAYER VIEW: Matches List
+                    upcomingMatches.length > 0 ? (
+                        upcomingMatches.map((match) => (
+                            <View key={match.id} style={styles.matchCard}>
+                                <View style={styles.matchInfo}>
+                                    <Text style={styles.opponentName}>vs {match.opponent_name}</Text>
+                                    <Text style={styles.matchDetails}>
+                                        {match.match_type.toUpperCase()} • {typeof match.opponent_rating === 'number' ? match.opponent_rating.toFixed(1) : 'N/A'}
+                                    </Text>
+                                    <Text style={styles.matchLocation}>📍 {match.location || 'TBA'}</Text>
+                                    <Text style={styles.matchTime}>
+                                        🕒 {match.scheduled_time
+                                            ? new Date(match.scheduled_time).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                                            : 'Time TBD'}
+                                    </Text>
+                                </View>
+                                <View style={[styles.statusBadge, { backgroundColor: match.status === 'accepted' ? '#D1FAE5' : '#FEF3C7' }]}>
+                                    <Text style={[styles.statusText, { color: match.status === 'accepted' ? '#065F46' : '#92400E' }]}>
+                                        {match.status.toUpperCase()}
+                                    </Text>
+                                </View>
+                                {match.status === 'accepted' && (
+                                    <TouchableOpacity
+                                        style={styles.chatButton}
+                                        onPress={() => navigation.navigate('Chat', {
+                                            matchId: match.id,
+                                            opponentName: match.opponent_name
+                                        })}
+                                    >
+                                        <Text style={styles.chatButtonText}>💬 Chat</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        ))
+                    ) : (
+                        <View style={styles.emptyCard}>
+                            <Text style={styles.emptyText}>No matches scheduled yet.</Text>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('MainTabs', { screen: 'Matchmaking' })}
+                            >
+                                <Text style={styles.linkText}>Find a partner 🎾</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )
                 )}
             </View>
 
@@ -162,19 +207,41 @@ const HomeScreen = ({ navigation }: any) => {
             <View style={styles.quickActions}>
                 <Text style={styles.sectionTitle}>Quick Actions</Text>
 
-                <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('MainTabs', { screen: 'Matchmaking' })}
-                >
-                    <Text style={styles.actionButtonText}>🎾 Find a Match</Text>
-                </TouchableOpacity>
+                {user?.role === 'organizer' ? (
+                    // ORGANIZER ACTIONS
+                    <>
+                        <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={() => navigation.navigate('CreateEvent')}
+                        >
+                            <Text style={styles.actionButtonText}>➕ Host New Event</Text>
+                        </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('MainTabs', { screen: 'Events' })}
-                >
-                    <Text style={styles.actionButtonText}>📅 Browse Events</Text>
-                </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={() => navigation.navigate('MainTabs', { screen: 'Events' })}
+                        >
+                            <Text style={styles.actionButtonText}>📅 Manage Events</Text>
+                        </TouchableOpacity>
+                    </>
+                ) : (
+                    // PLAYER ACTIONS
+                    <>
+                        <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={() => navigation.navigate('MainTabs', { screen: 'Matchmaking' })}
+                        >
+                            <Text style={styles.actionButtonText}>🎾 Find a Match</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={() => navigation.navigate('MainTabs', { screen: 'Events' })}
+                        >
+                            <Text style={styles.actionButtonText}>📅 Browse Events</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
 
                 <TouchableOpacity style={styles.actionButton}>
                     <Text style={styles.actionButtonText}>🛒 Shop Gear</Text>

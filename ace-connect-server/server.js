@@ -12,18 +12,18 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Database Connection
-const dbConfig = process.env.DATABASE_URL 
+const dbConfig = process.env.DATABASE_URL
     ? {
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false } // Required for most cloud DBs like Supabase/Render
-      }
+    }
     : {
         user: process.env.DB_USER,
         host: process.env.DB_HOST,
         database: process.env.DB_NAME,
         password: process.env.DB_PASSWORD,
         port: process.env.DB_PORT,
-      };
+    };
 
 const pool = new Pool(dbConfig);
 
@@ -52,10 +52,13 @@ app.get('/', (req, res) => {
     });
 });
 
+const eventsRoutes = require('./routes/events');
+
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/matchmaking', matchmakingRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/events', eventsRoutes);
 
 // Socket.io Setup
 const http = require('http');
@@ -106,7 +109,7 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 
-server.listen(port, () => {
+server.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port ${port} (HTTP + WebSockets)`);
 });
 

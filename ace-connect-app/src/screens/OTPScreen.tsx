@@ -159,6 +159,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 20,
         elevation: 10,
+        right: 32
     },
     title: {
         fontSize: typography.fontSize['3xl'],

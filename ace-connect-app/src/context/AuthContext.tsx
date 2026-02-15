@@ -12,6 +12,9 @@ interface User {
     photoUrl?: string;
     karmaRating?: number;
     reviewCount?: number;
+    role?: 'player' | 'organizer' | 'admin';
+    latitude?: number;
+    longitude?: number;
 }
 
 interface AuthContextType {
@@ -19,7 +22,7 @@ interface AuthContextType {
     token: string | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (email: string, password: string, name: string, ntrpRating?: number, location?: string) => Promise<void>;
+    register: (email: string, password: string, name: string, ntrpRating?: number, location?: string, role?: 'player' | 'organizer', latitude?: number, longitude?: number) => Promise<void>;
     logout: () => Promise<void>;
     updateUser: (userData: Partial<User>) => void;
 }
@@ -72,7 +75,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password: string,
         name: string,
         ntrpRating?: number,
-        location?: string
+        location?: string,
+        role: 'player' | 'organizer' = 'player',
+        latitude?: number,
+        longitude?: number
     ) => {
         try {
             await api.post('/auth/register', {
@@ -80,7 +86,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 password,
                 name,
                 ntrpRating,
-                location
+                location,
+                role,
+                latitude,
+                longitude
             });
             // Token/User are NOT set here anymore. User must verify OTP first.
         } catch (error: any) {

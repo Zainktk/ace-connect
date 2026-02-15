@@ -9,63 +9,73 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
 import MatchmakingScreen from '../screens/MatchmakingScreen';
-import EventsScreen from '../screens/EventsScreen';
+import ConnectScreen from '../screens/ConnectScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import OTPScreen from '../screens/OTPScreen';
+import CreateEventScreen from '../screens/CreateEventScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+import LocationSelectScreen from '../screens/LocationSelectScreen';
 
 const AuthStack = () => (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="OTP" component={OTPScreen} />
+        <Stack.Screen name="LocationSelect" component={LocationSelectScreen} />
     </Stack.Navigator>
 );
 
-const MainTabs = () => (
-    <Tab.Navigator
-        screenOptions={{
-            headerShown: true,
-            tabBarActiveTintColor: '#00A86B',
-            tabBarInactiveTintColor: '#6c757d',
-        }}
-    >
-        <Tab.Screen
-            name="Home"
-            component={HomeScreen}
-            options={{
-                tabBarLabel: 'Home',
-                tabBarIcon: () => null,
+const MainTabs = () => {
+    const { user } = useAuth();
+
+    return (
+        <Tab.Navigator
+            screenOptions={{
+                headerShown: true,
+                tabBarActiveTintColor: '#00A86B',
+                tabBarInactiveTintColor: '#6c757d',
             }}
-        />
-        <Tab.Screen
-            name="Matchmaking"
-            component={MatchmakingScreen}
-            options={{
-                tabBarLabel: 'Match',
-                tabBarIcon: () => null,
-            }}
-        />
-        <Tab.Screen
-            name="Events"
-            component={EventsScreen}
-            options={{
-                tabBarLabel: 'Events',
-                tabBarIcon: () => null,
-            }}
-        />
-        <Tab.Screen
-            name="Profile"
-            component={ProfileScreen}
-            options={{
-                tabBarLabel: 'Profile',
-                tabBarIcon: () => null,
-            }}
-        />
-    </Tab.Navigator>
-);
+        >
+            <Tab.Screen
+                name="Home"
+                component={HomeScreen}
+                options={{
+                    tabBarLabel: 'Home',
+                    tabBarIcon: () => null,
+                }}
+            />
+            {user?.role !== 'organizer' && (
+                <Tab.Screen
+                    name="Matchmaking"
+                    component={MatchmakingScreen}
+                    options={{
+                        tabBarLabel: 'Match',
+                        tabBarIcon: () => null,
+                    }}
+                />
+            )}
+            <Tab.Screen
+                name="Connect"
+                component={ConnectScreen}
+                options={{
+                    tabBarLabel: 'Connect',
+                    tabBarIcon: () => null,
+                }}
+            />
+            <Tab.Screen
+                name="Profile"
+                component={ProfileScreen}
+                options={{
+                    tabBarLabel: 'Profile',
+                    tabBarIcon: () => null,
+                }}
+            />
+        </Tab.Navigator>
+    );
+};
 
 // Import matchmaking screens
 import CreateMatchRequestScreen from '../screens/CreateMatchRequestScreen';
@@ -103,6 +113,11 @@ const MainStack = () => (
             options={{ title: 'Safety Guidelines' }}
         />
         <Stack.Screen
+            name="CreateEvent"
+            component={CreateEventScreen}
+            options={{ title: 'Host Event' }}
+        />
+        <Stack.Screen
             name="Chat"
             component={ChatScreen}
             options={({ route }: any) => ({
@@ -113,6 +128,11 @@ const MainStack = () => (
             name="MatchHistory"
             component={MatchHistoryScreen}
             options={{ title: 'Match History' }}
+        />
+        <Stack.Screen
+            name="LocationSelect"
+            component={LocationSelectScreen}
+            options={{ headerShown: false }}
         />
     </Stack.Navigator>
 );

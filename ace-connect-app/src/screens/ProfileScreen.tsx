@@ -23,6 +23,8 @@ const ProfileScreen = ({ navigation }: any) => {
     const [ntrpRating, setNtrpRating] = useState(user?.ntrpRating?.toString() || '');
     const [bio, setBio] = useState(user?.bio || '');
     const [location, setLocation] = useState(user?.location || '');
+    const [latitude, setLatitude] = useState(user?.latitude);
+    const [longitude, setLongitude] = useState(user?.longitude);
 
     useEffect(() => {
         setName(user?.name || '');
@@ -97,7 +99,11 @@ const ProfileScreen = ({ navigation }: any) => {
                     <Text style={styles.karmaCount}>{user?.reviewCount || 0} reviews</Text>
                 </View>
 
-                {user?.karmaRating && user.karmaRating >= 4.5 && (
+                {user?.role === 'organizer' ? (
+                    <View style={[styles.topPlayerBadge, { backgroundColor: '#E0F2FE', borderColor: '#0369A1' }]}>
+                        <Text style={[styles.topPlayerText, { color: '#0369A1' }]}>🏆 Verified Event Organizer</Text>
+                    </View>
+                ) : user?.karmaRating && user.karmaRating >= 4.5 && (
                     <View style={styles.topPlayerBadge}>
                         <Text style={styles.topPlayerText}>🏆 Highly Recommended Partner</Text>
                     </View>
@@ -106,7 +112,7 @@ const ProfileScreen = ({ navigation }: any) => {
 
             <View style={styles.form}>
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Name</Text>
+                    <Text style={styles.label}>{user?.role === 'organizer' ? 'Organization Name' : 'Name'}</Text>
                     <TextInput
                         style={[styles.input, !editing && styles.inputDisabled]}
                         value={name}
@@ -115,20 +121,22 @@ const ProfileScreen = ({ navigation }: any) => {
                     />
                 </View>
 
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>NTRP Rating</Text>
-                    <TextInput
-                        style={[styles.input, !editing && styles.inputDisabled]}
-                        value={ntrpRating}
-                        onChangeText={setNtrpRating}
-                        keyboardType="decimal-pad"
-                        editable={editing}
-                        placeholder="e.g., 3.5"
-                    />
-                </View>
+                {user?.role !== 'organizer' && (
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>NTRP Rating</Text>
+                        <TextInput
+                            style={[styles.input, !editing && styles.inputDisabled]}
+                            value={ntrpRating}
+                            onChangeText={setNtrpRating}
+                            keyboardType="decimal-pad"
+                            editable={editing}
+                            placeholder="e.g., 3.5"
+                        />
+                    </View>
+                )}
 
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Bio</Text>
+                    <Text style={styles.label}>{user?.role === 'organizer' ? 'About Organization' : 'Bio'}</Text>
                     <TextInput
                         style={[styles.input, styles.textArea, !editing && styles.inputDisabled]}
                         value={bio}
@@ -136,7 +144,7 @@ const ProfileScreen = ({ navigation }: any) => {
                         multiline
                         numberOfLines={3}
                         editable={editing}
-                        placeholder="Tell us about your tennis journey..."
+                        placeholder={user?.role === 'organizer' ? "Describe your organization and types of events..." : "Tell us about your tennis journey..."}
                     />
                 </View>
 
@@ -153,9 +161,17 @@ const ProfileScreen = ({ navigation }: any) => {
                         {editing && (
                             <TouchableOpacity
                                 style={styles.detectButton}
-                                onPress={detectLocation}
+                                onPress={() => navigation.navigate('LocationSelect', {
+                                    initialLat: latitude,
+                                    initialLng: longitude,
+                                    onSelect: (data: any) => {
+                                        setLocation(data.address);
+                                        setLatitude(data.latitude);
+                                        setLongitude(data.longitude);
+                                    }
+                                })}
                             >
-                                <Text style={styles.detectButtonText}>📍 Detect</Text>
+                                <Text style={styles.detectButtonText}>🗺️ Map</Text>
                             </TouchableOpacity>
                         )}
                     </View>

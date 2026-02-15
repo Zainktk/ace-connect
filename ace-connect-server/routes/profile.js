@@ -15,7 +15,7 @@ router.get('/:userId', async (req, res) => {
         const pool = req.app.get('db');
 
         const result = await pool.query(
-            `SELECT u.id, u.email, p.name, p.ntrp_rating, p.bio, p.location, p.photo_url,
+            `SELECT u.id, u.email, p.name, p.ntrp_rating, p.bio, p.location, p.photo_url, p.latitude, p.longitude,
              (SELECT AVG(rating)::FLOAT FROM match_reviews WHERE subject_id = u.id) as karma_rating,
              (SELECT COUNT(*) FROM match_reviews WHERE subject_id = u.id) as review_count
              FROM users u
@@ -39,7 +39,10 @@ router.get('/:userId', async (req, res) => {
             location: user.location,
             photoUrl: user.photo_url,
             karmaRating: user.karma_rating || 5.0, // Default to 5.0
-            reviewCount: parseInt(user.review_count) || 0
+            karmaRating: user.karma_rating || 5.0, // Default to 5.0
+            reviewCount: parseInt(user.review_count) || 0,
+            latitude: user.latitude,
+            longitude: user.longitude
         });
     } catch (error) {
         console.error('Get profile error:', error);
@@ -57,7 +60,10 @@ router.put('/', authMiddleware, [
     body('ntrpRating').optional().isFloat({ min: 1.0, max: 7.0 }),
     body('bio').optional().trim(),
     body('location').optional().trim(),
-    body('photoUrl').optional().isURL()
+    body('location').optional().trim(),
+    body('photoUrl').optional().isURL(),
+    body('latitude').optional().isFloat(),
+    body('longitude').optional().isFloat()
 ], async (req, res) => {
     try {
         // Validate input
@@ -66,7 +72,7 @@ router.put('/', authMiddleware, [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { name, ntrpRating, bio, location, photoUrl } = req.body;
+        const { name, ntrpRating, bio, location, photoUrl, latitude, longitude } = req.body;
         const pool = req.app.get('db');
 
         // Build update query dynamically
@@ -93,6 +99,15 @@ router.put('/', authMiddleware, [
         if (photoUrl !== undefined) {
             updates.push(`photo_url = $${paramCount++}`);
             values.push(photoUrl);
+            values.push(photoUrl);
+        }
+        if (latitude !== undefined) {
+            updates.push(`latitude = $${paramCount++}`);
+            values.push(latitude);
+        }
+        if (longitude !== undefined) {
+            updates.push(`longitude = $${paramCount++}`);
+            values.push(longitude);
         }
 
         if (updates.length === 0) {
@@ -105,7 +120,7 @@ router.put('/', authMiddleware, [
             UPDATE profiles 
             SET ${updates.join(', ')}
             WHERE user_id = $${paramCount}
-            RETURNING name, ntrp_rating, bio, location, photo_url
+            RETURNING name, ntrp_rating, bio, location, photo_url, latitude, longitude
         `;
 
         const result = await pool.query(query, values);
@@ -123,7 +138,10 @@ router.put('/', authMiddleware, [
             ntrpRating: profile.ntrp_rating,
             bio: profile.bio,
             location: profile.location,
-            photoUrl: profile.photo_url
+            location: profile.location,
+            photoUrl: profile.photo_url,
+            latitude: profile.latitude,
+            longitude: profile.longitude
         });
     } catch (error) {
         console.error('Update profile error:', error);

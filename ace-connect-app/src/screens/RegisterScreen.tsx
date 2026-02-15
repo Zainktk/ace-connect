@@ -22,6 +22,9 @@ const RegisterScreen = ({ navigation }: any) => {
     const [password, setPassword] = useState('');
     const [ntrpRating, setNtrpRating] = useState('');
     const [location, setLocation] = useState('');
+    const [latitude, setLatitude] = useState<number | undefined>(undefined);
+    const [longitude, setLongitude] = useState<number | undefined>(undefined);
+    const [role, setRole] = useState<'player' | 'organizer'>('player');
     const [loading, setLoading] = useState(false);
     const { register } = useAuth();
 
@@ -40,7 +43,7 @@ const RegisterScreen = ({ navigation }: any) => {
         try {
             const rating = ntrpRating ? parseFloat(ntrpRating) : undefined;
             const normalizedEmail = email.toLowerCase().trim();
-            await register(normalizedEmail, password, name.trim(), rating, location.trim());
+            await register(normalizedEmail, password, name.trim(), rating, location.trim(), role);
 
             Alert.alert(
                 'Verification Required',
@@ -92,16 +95,38 @@ const RegisterScreen = ({ navigation }: any) => {
                         {/* Header */}
                         <View style={styles.header}>
                             <Text style={styles.title}>Join AceConnect</Text>
-                            <Text style={styles.subtitle}>Start your tennis journey</Text>
+                            <Text style={styles.subtitle}>
+                                {role === 'organizer' ? 'Host events & build community' : 'Start your tennis journey'}
+                            </Text>
                         </View>
 
                         {/* Form */}
                         <View style={styles.form}>
+
+                            {/* Role Selection */}
+                            <View style={styles.roleContainer}>
+                                <Text style={styles.label}>I am a:</Text>
+                                <View style={styles.roleSelector}>
+                                    <TouchableOpacity
+                                        style={[styles.roleButton, role === 'player' && styles.roleButtonActive]}
+                                        onPress={() => setRole('player')}
+                                    >
+                                        <Text style={[styles.roleButtonText, role === 'player' && styles.roleButtonTextActive]}>Player 🎾</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.roleButton, role === 'organizer' && styles.roleButtonActive]}
+                                        onPress={() => setRole('organizer')}
+                                    >
+                                        <Text style={[styles.roleButtonText, role === 'organizer' && styles.roleButtonTextActive]}>Organizer 🏆</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Name *</Text>
+                                <Text style={styles.label}>{role === 'organizer' ? 'Organization Name *' : 'Name *'}</Text>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="John Doe"
+                                    placeholder={role === 'organizer' ? "e.g., NYC Tennis Club" : "John Doe"}
                                     placeholderTextColor={colors.text.muted}
                                     value={name}
                                     onChangeText={setName}
@@ -122,9 +147,15 @@ const RegisterScreen = ({ navigation }: any) => {
                                     />
                                     <TouchableOpacity
                                         style={styles.detectButton}
-                                        onPress={detectLocation}
+                                        onPress={() => navigation.navigate('LocationSelect', {
+                                            onSelect: (data: any) => {
+                                                setLocation(data.address);
+                                                setLatitude(data.latitude);
+                                                setLongitude(data.longitude);
+                                            }
+                                        })}
                                     >
-                                        <Text style={styles.detectButtonText}>📍 Detect</Text>
+                                        <Text style={styles.detectButtonText}>🗺️ Map</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -156,21 +187,23 @@ const RegisterScreen = ({ navigation }: any) => {
                                 />
                             </View>
 
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>NTRP Rating (Optional)</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="e.g., 3.5"
-                                    placeholderTextColor={colors.text.muted}
-                                    value={ntrpRating}
-                                    onChangeText={setNtrpRating}
-                                    keyboardType="decimal-pad"
-                                    editable={!loading}
-                                />
-                                <Text style={styles.helperText}>
-                                    NTRP scale: 1.0 (beginner) to 7.0 (professional)
-                                </Text>
-                            </View>
+                            {role === 'player' && (
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.label}>NTRP Rating (Optional)</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="e.g., 3.5"
+                                        placeholderTextColor={colors.text.muted}
+                                        value={ntrpRating}
+                                        onChangeText={setNtrpRating}
+                                        keyboardType="decimal-pad"
+                                        editable={!loading}
+                                    />
+                                    <Text style={styles.helperText}>
+                                        NTRP scale: 1.0 (beginner) to 7.0 (professional)
+                                    </Text>
+                                </View>
+                            )}
 
                             <TouchableOpacity
                                 style={[styles.button, loading && styles.buttonDisabled]}
@@ -253,6 +286,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
         justifyContent: 'center',
         borderRadius: borderRadius.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
     },
     detectButtonText: {
         color: colors.text.light,
@@ -310,6 +346,35 @@ const styles = StyleSheet.create({
     linkTextBold: {
         fontWeight: typography.fontWeight.bold,
         color: colors.primary.green,
+    },
+    roleContainer: {
+        marginBottom: spacing.lg,
+    },
+    roleSelector: {
+        flexDirection: 'row',
+        gap: spacing.md,
+    },
+    roleButton: {
+        flex: 1,
+        padding: spacing.md,
+        borderRadius: borderRadius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        alignItems: 'center',
+        backgroundColor: colors.background.secondary,
+    },
+    roleButtonActive: {
+        backgroundColor: colors.primary.green,
+        borderColor: colors.primary.green,
+    },
+    roleButtonText: {
+        fontSize: typography.fontSize.md,
+        fontWeight: typography.fontWeight.semibold,
+        color: colors.text.primary,
+    },
+    roleButtonTextActive: {
+        color: colors.text.light,
+        fontWeight: typography.fontWeight.bold,
     },
 });
 

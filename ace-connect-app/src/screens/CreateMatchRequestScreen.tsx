@@ -72,26 +72,9 @@ const CreateMatchRequestScreen = ({ navigation }: any) => {
         }
     };
 
-    const detectLocation = () => {
-        Geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude: lat, longitude: lng } = position.coords;
-                setLatitude(lat);
-                setLongitude(lng);
-                setLocation(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-                Alert.alert('Location Detected', 'Coordinates updated! Drop a pin on the map for more precision.');
-            },
-            (error) => Alert.alert('Error', 'Could not detect location.'),
-            { enableHighAccuracy: true, timeout: 15000 }
-        );
-    };
 
-    const handleMapSelect = (e: any) => {
-        const { latitude: lat, longitude: lng } = e.nativeEvent.coordinate;
-        setLatitude(lat);
-        setLongitude(lng);
-        setLocation(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-    };
+
+
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -145,16 +128,22 @@ const CreateMatchRequestScreen = ({ navigation }: any) => {
                     value={location}
                     onChangeText={setLocation}
                 />
-                <TouchableOpacity style={styles.detectButton} onPress={detectLocation}>
-                    <Text style={styles.detectButtonText}>📍 Detect</Text>
+                <TouchableOpacity
+                    style={styles.detectButton}
+                    onPress={() => navigation.navigate('LocationSelect', {
+                        initialLat: latitude,
+                        initialLng: longitude,
+                        onSelect: (data: any) => {
+                            setLatitude(data.latitude);
+                            setLongitude(data.longitude);
+                            setLocation(data.address);
+                        }
+                    })}
+                >
+                    <Text style={styles.detectButtonText}>🗺️ Map</Text>
                 </TouchableOpacity>
             </View>
-            <TouchableOpacity
-                style={styles.mapPickerButton}
-                onPress={() => setMapModalVisible(true)}
-            >
-                <Text style={styles.mapPickerButtonText}>🗺️ Pick on Map</Text>
-            </TouchableOpacity>
+
 
             {/* Date & Time */}
             <Text style={styles.label}>Preferred Date (Optional)</Text>
@@ -248,36 +237,6 @@ const CreateMatchRequestScreen = ({ navigation }: any) => {
                 <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
 
-            {/* Map Picker Modal */}
-            <Modal visible={mapModalVisible} animationType="slide">
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Drop a Pin</Text>
-                        <TouchableOpacity onPress={() => setMapModalVisible(false)}>
-                            <Text style={styles.modalClose}>Done</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <MapView
-                        style={styles.map}
-                        initialRegion={{
-                            latitude,
-                            longitude,
-                            latitudeDelta: 0.05,
-                            longitudeDelta: 0.05,
-                        }}
-                        onPress={handleMapSelect}
-                    >
-                        <Marker
-                            coordinate={{ latitude, longitude }}
-                            draggable
-                            onDragEnd={handleMapSelect}
-                        />
-                    </MapView>
-                    <View style={styles.mapInstructions}>
-                        <Text style={styles.instructionText}>Tap or drag the pin to set match location</Text>
-                    </View>
-                </View>
-            </Modal>
         </ScrollView>
     );
 };
@@ -448,47 +407,7 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.sm,
         fontWeight: 'bold',
     },
-    modalContainer: {
-        flex: 1,
-        backgroundColor: colors.background.primary,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: spacing.lg,
-        backgroundColor: colors.background.card,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-    },
-    modalTitle: {
-        fontSize: typography.fontSize.lg,
-        fontWeight: 'bold',
-        color: colors.text.primary,
-    },
-    modalClose: {
-        fontSize: typography.fontSize.md,
-        color: colors.primary.green,
-        fontWeight: 'bold',
-    },
-    map: {
-        flex: 1,
-    },
-    mapInstructions: {
-        position: 'absolute',
-        bottom: 30,
-        left: 20,
-        right: 20,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        padding: spacing.md,
-        borderRadius: borderRadius.lg,
-        alignItems: 'center',
-    },
-    instructionText: {
-        color: '#fff',
-        fontSize: typography.fontSize.sm,
-        fontWeight: '500',
-    },
+
 });
 
 export default CreateMatchRequestScreen;

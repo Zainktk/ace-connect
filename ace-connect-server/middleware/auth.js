@@ -20,9 +20,9 @@ const authMiddleware = async (req, res, next) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         const pool = req.app.get('db');
 
-        // Check if user is banned
+        // Check if user is banned and get role
         const userResult = await pool.query(
-            'SELECT is_banned FROM users WHERE id = $1',
+            'SELECT is_banned, role FROM users WHERE id = $1',
             [decoded.userId]
         );
 
@@ -37,7 +37,8 @@ const authMiddleware = async (req, res, next) => {
         // Attach user info to request
         req.user = {
             id: decoded.userId,
-            email: decoded.email
+            email: decoded.email,
+            role: userResult.rows[0].role // Add role to request object
         };
 
         next();
