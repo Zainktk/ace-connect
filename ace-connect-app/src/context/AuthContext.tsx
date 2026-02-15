@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
+import NotificationService from '../services/NotificationService';
 
 interface User {
     id: number;
@@ -39,6 +40,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         checkAuthStatus();
     }, []);
 
+    const updateFCMToken = async () => {
+        try {
+            const hasPermission = await NotificationService.requestUserPermission();
+            if (hasPermission) {
+                const fcmToken = await NotificationService.getFCMToken();
+                if (fcmToken) {
+                    await api.put('/users/fcm-token', { token: fcmToken });
+                    console.log('FCM Token synced with backend');
+                }
+            }
+            NotificationService.setupListeners();
+        } catch (error) {
+            console.error('Failed to sync FCM token:', error);
+        }
+    };
+
     const checkAuthStatus = async () => {
         try {
             const storedToken = await AsyncStorage.getItem('authToken');
@@ -47,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (storedToken && storedUser) {
                 setToken(storedToken);
                 setUser(JSON.parse(storedUser));
+                updateFCMToken(); // Auto-update token on app open
             }
         } catch (error) {
             console.error('Error checking auth status:', error);
@@ -65,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             setToken(newToken);
             setUser(userData);
+            updateFCMToken(); // Update token on login
         } catch (error: any) {
             throw error;
         }

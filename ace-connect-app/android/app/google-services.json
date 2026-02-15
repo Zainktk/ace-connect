@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "605450781202",
+    "project_id": "ace-connect-2fe65",
+    "storage_bucket": "ace-connect-2fe65.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:605450781202:android:fc9ab8fbb4336cb4888ecb",
+        "android_client_info": {
+          "package_name": "com.aceconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjBaPvpnw8T3AtXeWrt7HfHOODTmydSSg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
