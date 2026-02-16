@@ -108,6 +108,25 @@ router.post('/:id/join', authMiddleware, async (req, res) => {
         const { id } = req.params;
         const pool = req.app.get('db');
 
+        // Check if event exists and get current status
+        const eventResult = await pool.query(
+            `SELECT e.*, 
+            (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) as current_participants
+            FROM events e WHERE e.id = $1`,
+            [id]
+        );
+
+        if (eventResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        const event = eventResult.rows[0];
+
+        // Check if event is full
+        if (event.max_participants && event.current_participants >= event.max_participants) {
+            return res.status(400).json({ error: 'Event is full' });
+        }
+
         // Check if already joined
         const existing = await pool.query(
             'SELECT * FROM event_participants WHERE event_id = $1 AND user_id = $2',
