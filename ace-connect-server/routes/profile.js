@@ -40,7 +40,6 @@ router.get('/:userId', async (req, res) => {
             location: user.location,
             photoUrl: user.photo_url,
             karmaRating: user.karma_rating || 5.0, // Default to 5.0
-            karmaRating: user.karma_rating || 5.0, // Default to 5.0
             reviewCount: parseInt(user.review_count) || 0,
             latitude: user.latitude,
             longitude: user.longitude,
@@ -62,7 +61,6 @@ router.put('/', authMiddleware, [
     body('name').optional().trim().notEmpty(),
     body('ntrpRating').optional().isFloat({ min: 1.0, max: 7.0 }),
     body('bio').optional().trim(),
-    body('location').optional().trim(),
     body('location').optional().trim(),
     body('photoUrl').optional().isURL(),
     body('latitude').optional().isFloat(),
@@ -102,7 +100,6 @@ router.put('/', authMiddleware, [
         if (photoUrl !== undefined) {
             updates.push(`photo_url = $${paramCount++}`);
             values.push(photoUrl);
-            values.push(photoUrl);
         }
         if (latitude !== undefined) {
             updates.push(`latitude = $${paramCount++}`);
@@ -140,7 +137,6 @@ router.put('/', authMiddleware, [
             name: profile.name,
             ntrpRating: profile.ntrp_rating,
             bio: profile.bio,
-            location: profile.location,
             location: profile.location,
             photoUrl: profile.photo_url,
             latitude: profile.latitude,
