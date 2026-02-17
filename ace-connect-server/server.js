@@ -53,7 +53,7 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3001',
     'https://ace-connect-web.vercel.app',
-    'https://ace-connect-web-*.vercel.app', // Preview deployments
+    'https://ace-connect-*.vercel.app', // Handles all ace-connect related Vercel URLs
 ];
 
 app.use(cors({
