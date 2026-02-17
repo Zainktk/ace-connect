@@ -49,7 +49,35 @@ const payoutService = new PayoutService(pool);
 payoutService.start();
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3001',
+    'https://ace-connect-web.vercel.app',
+    'https://ace-connect-web-*.vercel.app', // Preview deployments
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+
+        // Check if origin matches allowed patterns
+        const isAllowed = allowedOrigins.some(allowed => {
+            if (allowed.includes('*')) {
+                const pattern = allowed.replace('*', '.*');
+                return new RegExp(pattern).test(origin);
+            }
+            return allowed === origin;
+        });
+
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
 app.use(express.json());
 
 // Routes
