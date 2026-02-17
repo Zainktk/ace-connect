@@ -58,13 +58,13 @@ router.get('/:userId', async (req, res) => {
  * @access  Private
  */
 router.put('/', authMiddleware, [
-    body('name').optional().trim().notEmpty(),
-    body('ntrpRating').optional().isFloat({ min: 1.0, max: 7.0 }),
-    body('bio').optional().trim(),
-    body('location').optional().trim(),
-    body('photoUrl').optional().isURL(),
-    body('latitude').optional().isFloat(),
-    body('longitude').optional().isFloat()
+    body('name').optional({ checkFalsy: true }).trim().notEmpty(),
+    body('ntrpRating').optional({ checkFalsy: true }).isFloat({ min: 1.0, max: 7.0 }),
+    body('bio').optional({ checkFalsy: true }).trim(),
+    body('location').optional({ checkFalsy: true }).trim(),
+    body('photoUrl').optional({ checkFalsy: true }).isURL(),
+    body('latitude').optional({ checkFalsy: true }).isFloat(),
+    body('longitude').optional({ checkFalsy: true }).isFloat()
 ], async (req, res) => {
     try {
         // Validate input
