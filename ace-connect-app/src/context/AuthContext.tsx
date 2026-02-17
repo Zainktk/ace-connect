@@ -16,6 +16,9 @@ interface User {
     role?: 'player' | 'organizer' | 'admin';
     latitude?: number;
     longitude?: number;
+    isOrganizerVerified?: boolean;
+    walletBalance?: number;
+    stripeOnboardingComplete?: boolean;
 }
 
 interface AuthContextType {
@@ -115,7 +118,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error(error.response?.data?.error || 'Registration failed');
         }
     };
-
     const logout = async () => {
         try {
             await AsyncStorage.removeItem('authToken');

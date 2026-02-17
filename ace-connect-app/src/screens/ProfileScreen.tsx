@@ -8,6 +8,9 @@ import {
     Alert,
     ActivityIndicator,
     ScrollView,
+    Linking,
+    AppState,
+    AppStateStatus,
 } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +28,8 @@ const ProfileScreen = ({ navigation }: any) => {
     const [location, setLocation] = useState(user?.location || '');
     const [latitude, setLatitude] = useState(user?.latitude);
     const [longitude, setLongitude] = useState(user?.longitude);
+    const [onboardingLoading, setOnboardingLoading] = useState(false);
+    const [isStripeComplete, setIsStripeComplete] = useState(user?.stripeOnboardingComplete || false);
 
     useEffect(() => {
         setName(user?.name || '');
@@ -56,6 +61,52 @@ const ProfileScreen = ({ navigation }: any) => {
             setLoading(false);
         }
     };
+
+    const handleStripeOnboard = async () => {
+        setOnboardingLoading(true);
+        try {
+            const response = await api.post('/payments/onboard');
+            const { url } = response.data;
+            if (url) {
+                await Linking.openURL(url);
+            }
+        } catch (error: any) {
+            console.error('Stripe Onboarding Error:', error.response?.data);
+            const errorMsg = error.response?.data?.details || 'Could not start Stripe onboarding. Please try again.';
+            Alert.alert('Error', errorMsg);
+        } finally {
+            setOnboardingLoading(false);
+        }
+    };
+
+    const checkStripeStatus = async () => {
+        try {
+            const response = await api.get('/payments/onboard-status');
+            if (response.data.complete) {
+                setIsStripeComplete(true);
+                updateUser({ stripeOnboardingComplete: true });
+            }
+        } catch (error) {
+            console.error('Failed to check Stripe status');
+        }
+    };
+
+    useEffect(() => {
+        if (user?.role === 'organizer' && !isStripeComplete) {
+            checkStripeStatus();
+        }
+
+        // Check status when app returns from background (browser onboarding)
+        const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+            if (nextAppState === 'active' && user?.role === 'organizer' && !isStripeComplete) {
+                checkStripeStatus();
+            }
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, [user?.role, isStripeComplete]);
 
     const handleLogout = () => {
         Alert.alert(
@@ -100,8 +151,38 @@ const ProfileScreen = ({ navigation }: any) => {
                 </View>
 
                 {user?.role === 'organizer' ? (
-                    <View style={[styles.topPlayerBadge, { backgroundColor: '#E0F2FE', borderColor: '#0369A1' }]}>
-                        <Text style={[styles.topPlayerText, { color: '#0369A1' }]}>🏆 Verified Event Organizer</Text>
+                    <View style={{ alignItems: 'center' }}>
+                        <View style={[styles.topPlayerBadge, { backgroundColor: '#E0F2FE', borderColor: '#0369A1' }]}>
+                            <Text style={[styles.topPlayerText, { color: '#0369A1' }]}>
+                                {user?.isOrganizerVerified ? '🛡️ Verified Organizer' : '⏳ Verification Pending'}
+                            </Text>
+                        </View>
+                        <View style={styles.walletCard}>
+                            <Text style={styles.walletLabel}>Escrow Wallet</Text>
+                            <Text style={styles.walletAmount}>${(user?.walletBalance || 0).toFixed(2)}</Text>
+                            <Text style={styles.walletSubtext}>* Funds released 24h after event</Text>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[
+                                styles.stripeButton,
+                                isStripeComplete && styles.stripeButtonComplete,
+                                onboardingLoading && { opacity: 0.7 }
+                            ]}
+                            onPress={handleStripeOnboard}
+                            disabled={onboardingLoading || isStripeComplete}
+                        >
+                            {onboardingLoading ? (
+                                <ActivityIndicator color="#fff" size="small" />
+                            ) : (
+                                <>
+                                    <Text style={styles.stripeButtonText}>
+                                        {isStripeComplete ? '💳 Stripe Connected' : '🔗 Connect Stripe for Payouts'}
+                                    </Text>
+                                    {!isStripeComplete && <Text style={styles.stripeSubtext}>Required to receive real money</Text>}
+                                </>
+                            )}
+                        </TouchableOpacity>
                     </View>
                 ) : user?.karmaRating && user.karmaRating >= 4.5 && (
                     <View style={styles.topPlayerBadge}>
@@ -385,6 +466,68 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.xs,
         fontWeight: 'bold',
         color: '#92400E',
+    },
+    walletCard: {
+        backgroundColor: '#fff',
+        padding: 15,
+        borderRadius: 12,
+        marginTop: 15,
+        width: '80%',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#eee',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    walletLabel: {
+        fontSize: 12,
+        color: '#666',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    walletAmount: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#00A86B',
+        marginVertical: 5,
+    },
+    walletSubtext: {
+        fontSize: 10,
+        color: '#999',
+        fontStyle: 'italic',
+    },
+    stripeButton: {
+        backgroundColor: '#635BFF',
+        width: '80%',
+        paddingVertical: 12,
+        borderRadius: 10,
+        marginTop: 15,
+        alignItems: 'center',
+        shadowColor: '#635BFF',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 3,
+    },
+    stripeButtonComplete: {
+        backgroundColor: '#E0E7FF',
+        borderWidth: 1,
+        borderColor: '#635BFF',
+        shadowOpacity: 0,
+        elevation: 0,
+    },
+    stripeButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
+    stripeSubtext: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 10,
+        marginTop: 2,
     },
 });
 

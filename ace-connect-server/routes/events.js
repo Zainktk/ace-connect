@@ -20,6 +20,8 @@ router.get('/', authMiddleware, async (req, res) => {
             // Organizer: See ONLY their own events
             query = `SELECT e.*, 
             COALESCE(p.name, u.email) as organizer_name,
+            u.is_organizer_verified,
+            u.verification_status as organizer_verification_status,
             u.email as organizer_email,
             (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) as participant_count,
             EXISTS(SELECT 1 FROM event_participants WHERE event_id = e.id AND user_id = $1) as is_joined
@@ -33,13 +35,14 @@ router.get('/', authMiddleware, async (req, res) => {
             // Player: See ALL upcoming events
             query = `SELECT e.*, 
             COALESCE(p.name, u.email) as organizer_name,
+            u.is_organizer_verified,
+            u.verification_status as organizer_verification_status,
             u.email as organizer_email,
             (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) as participant_count,
             EXISTS(SELECT 1 FROM event_participants WHERE event_id = e.id AND user_id = $1) as is_joined
             FROM events e
             JOIN users u ON e.organizer_id = u.id
             LEFT JOIN profiles p ON u.id = p.user_id
-            -- WHERE e.event_date >= NOW() (Commented out for testing)
             ORDER BY e.event_date ASC`;
             queryParams = [req.user.id];
         }
@@ -137,13 +140,20 @@ router.post('/:id/join', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: 'Already joined this event' });
         }
 
+        // Determine initial payment status
+        const initialPaymentStatus = parseFloat(event.price) > 0 ? 'pending' : 'free';
+
         // Add participant
         await pool.query(
-            'INSERT INTO event_participants (event_id, user_id) VALUES ($1, $2)',
-            [id, req.user.id]
+            'INSERT INTO event_participants (event_id, user_id, payment_status) VALUES ($1, $2, $3)',
+            [id, req.user.id, initialPaymentStatus]
         );
 
-        res.json({ message: 'Successfully joined event' });
+        res.json({
+            message: 'Successfully joined event',
+            paymentStatus: initialPaymentStatus,
+            price: event.price
+        });
     } catch (error) {
         console.error('Join event error:', error);
         res.status(500).json({ error: 'Server error' });

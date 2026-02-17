@@ -8,8 +8,9 @@ const profileRoutes = require('./routes/profile');
 const matchmakingRoutes = require('./routes/matchmaking');
 const userRoutes = require('./routes/users');
 const notificationService = require('./services/notificationService');
+const PayoutService = require('./services/payoutService');
 
-// Initialize Firebase Admin for Push Notifications
+// Initialize Services
 notificationService.initialize();
 
 const app = express();
@@ -43,6 +44,10 @@ pool.query('SELECT NOW()', (err, res) => {
 // Make pool available to routes
 app.set('db', pool);
 
+// Start Background Services
+const payoutService = new PayoutService(pool);
+payoutService.start();
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -57,12 +62,14 @@ app.get('/', (req, res) => {
 });
 
 const eventsRoutes = require('./routes/events');
+const paymentsRoutes = require('./routes/payments');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/matchmaking', matchmakingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/payments', paymentsRoutes);
 
 // Socket.io Setup
 const http = require('http');

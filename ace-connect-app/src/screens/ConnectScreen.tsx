@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert, Refre
 import { useNavigation } from '@react-navigation/native';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import PaymentModal from '../components/PaymentModal';
 
 interface Event {
     id: number;
@@ -10,9 +11,11 @@ interface Event {
     description: string;
     event_date: string;
     location: string;
-    price: number;
+    price: number | string;
     image_url: string;
     organizer_name: string;
+    is_organizer_verified?: boolean;
+    organizer_verification_status?: string;
     is_joined?: boolean;
     participant_count: number;
     max_participants: number | null;
@@ -23,6 +26,10 @@ const ConnectScreen = () => {
     const { token, user } = useAuth();
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(false);
+
+    // Payment Modal State
+    const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
     const fetchEvents = async () => {
         try {
@@ -52,18 +59,27 @@ const ConnectScreen = () => {
             return;
         }
 
+        const eventPrice = typeof event.price === 'string' ? parseFloat(event.price) : event.price;
+
         Alert.alert(
             "Join Event",
-            `Do you want to join "${event.title}" for $${typeof event.price === 'string' ? parseFloat(event.price).toFixed(2) : event.price.toFixed(2)}?`,
+            `Do you want to join "${event.title}" for $${eventPrice.toFixed(2)}?`,
             [
                 { text: "Cancel", style: "cancel" },
                 {
-                    text: "Join Now",
+                    text: eventPrice > 0 ? "Join & Pay" : "Join Now",
                     onPress: async () => {
                         try {
-                            await api.post(`/events/${event.id}/join`);
-                            Alert.alert("Success", "You have joined the event!");
-                            fetchEvents();
+                            const joinRes = await api.post(`/events/${event.id}/join`);
+
+                            if (joinRes.data.paymentStatus === 'pending') {
+                                // Show Payment Modal instead of another alert
+                                setSelectedEvent(event);
+                                setPaymentModalVisible(true);
+                            } else {
+                                Alert.alert("Success", "You have joined the event!");
+                                fetchEvents();
+                            }
                         } catch (error: any) {
                             Alert.alert("Error", error.response?.data?.error || "Failed to join event");
                         }
@@ -71,6 +87,16 @@ const ConnectScreen = () => {
                 }
             ]
         );
+    };
+
+    const handlePaymentSuccess = () => {
+        setPaymentModalVisible(false);
+        Alert.alert("Success", "Payment confirmed! Funds are held in escrow.");
+        fetchEvents();
+    };
+
+    const processPayment = async (eventId: number) => {
+        await api.post('/payments/pay-event', { eventId });
     };
 
     const renderEventItem = ({ item }: { item: Event }) => {
@@ -97,7 +123,14 @@ const ConnectScreen = () => {
                     </View>
 
                     {user?.role !== 'organizer' && (
-                        <Text style={styles.organizer}>by {item.organizer_name}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                            <Text style={styles.organizer}>by {item.organizer_name}</Text>
+                            {item.is_organizer_verified && (
+                                <View style={styles.verifiedBadge}>
+                                    <Text style={styles.verifiedText}>✓ Verified</Text>
+                                </View>
+                            )}
+                        </View>
                     )}
 
                     <View style={styles.row}>
@@ -110,7 +143,9 @@ const ConnectScreen = () => {
                     <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
 
                     <View style={styles.footer}>
-                        <Text style={styles.price}>${typeof item.price === 'string' ? parseFloat(item.price).toFixed(2) : item.price.toFixed(2)}</Text>
+                        <Text style={styles.price}>
+                            ${(typeof item.price === 'string' ? parseFloat(item.price) : item.price).toFixed(2)}
+                        </Text>
 
                         {user?.role === 'organizer' ? (
                             <View style={[styles.joinButton, { backgroundColor: '#e9ecef' }]}>
@@ -174,6 +209,18 @@ const ConnectScreen = () => {
                     </View>
                 }
             />
+
+            {selectedEvent && (
+                <PaymentModal
+                    visible={paymentModalVisible}
+                    onClose={() => setPaymentModalVisible(false)}
+                    onSuccess={handlePaymentSuccess}
+                    eventTitle={selectedEvent.title}
+                    amount={typeof selectedEvent.price === 'string' ? parseFloat(selectedEvent.price) : selectedEvent.price}
+                    eventId={selectedEvent.id}
+                    processPayment={processPayment}
+                />
+            )}
         </View>
     );
 };
@@ -305,6 +352,20 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 14,
+    },
+    verifiedBadge: {
+        backgroundColor: '#E7F5FF',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 10,
+        marginLeft: 8,
+        borderWidth: 1,
+        borderColor: '#339AF0',
+    },
+    verifiedText: {
+        fontSize: 10,
+        color: '#228BE6',
+        fontWeight: 'bold',
     },
 });
 

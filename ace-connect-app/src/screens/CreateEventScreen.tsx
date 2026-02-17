@@ -9,7 +9,8 @@ import {
     Alert,
     ActivityIndicator,
     Image,
-    Platform
+    Platform,
+    Modal
 } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../theme/index';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -36,23 +37,30 @@ const CreateEventScreen = ({ navigation }: any) => {
     const [showTimePicker, setShowTimePicker] = useState(false);
 
     const onDateChange = (event: any, selectedDate?: Date) => {
-        setShowDatePicker(Platform.OS === 'ios');
+        // For iOS spinner, we don't close the modal immediately
+        if (Platform.OS === 'android') {
+            setShowDatePicker(false);
+        }
+
         if (selectedDate) {
-            const currentDate = selectedDate;
-            // Keep the time from the current date state
-            currentDate.setHours(date.getHours());
-            currentDate.setMinutes(date.getMinutes());
+            const currentDate = new Date(date);
+            currentDate.setFullYear(selectedDate.getFullYear());
+            currentDate.setMonth(selectedDate.getMonth());
+            currentDate.setDate(selectedDate.getDate());
             setDate(currentDate);
         }
     };
 
     const onTimeChange = (event: any, selectedDate?: Date) => {
-        setShowTimePicker(Platform.OS === 'ios');
+        if (Platform.OS === 'android') {
+            setShowTimePicker(false);
+        }
+
         if (selectedDate) {
-            const currentDate = date;
+            const currentDate = new Date(date);
             currentDate.setHours(selectedDate.getHours());
             currentDate.setMinutes(selectedDate.getMinutes());
-            setDate(new Date(currentDate)); // Create new date object to trigger re-render
+            setDate(currentDate);
         }
     };
 
@@ -85,6 +93,59 @@ const CreateEventScreen = ({ navigation }: any) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const renderDateTimePicker = (mode: 'date' | 'time') => {
+        const isOpen = mode === 'date' ? showDatePicker : showTimePicker;
+        const setOpen = mode === 'date' ? setShowDatePicker : setShowTimePicker;
+        const onChange = mode === 'date' ? onDateChange : onTimeChange;
+
+        if (!isOpen) return null;
+
+        if (Platform.OS === 'ios') {
+            return (
+                <Modal
+                    transparent={true}
+                    animationType="slide"
+                    visible={isOpen}
+                    onRequestClose={() => setOpen(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <TouchableOpacity onPress={() => setOpen(false)}>
+                                    <Text style={styles.modalCancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setOpen(false)}>
+                                    <Text style={styles.modalDoneText}>Confirm</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <View style={{ backgroundColor: '#fff', height: 216 }}>
+                                <DateTimePicker
+                                    value={date}
+                                    mode={mode}
+                                    display="spinner"
+                                    onChange={onChange}
+                                    minimumDate={mode === 'date' ? new Date() : undefined}
+                                    textColor="#000000"
+                                    style={{ height: 216, width: '100%' }}
+                                />
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+            );
+        }
+
+        return (
+            <DateTimePicker
+                value={date}
+                mode={mode}
+                display="default"
+                onChange={onChange}
+                minimumDate={mode === 'date' ? new Date() : undefined}
+            />
+        );
     };
 
     return (
@@ -139,24 +200,8 @@ const CreateEventScreen = ({ navigation }: any) => {
                     </TouchableOpacity>
                 </View>
 
-                {showDatePicker && (
-                    <DateTimePicker
-                        value={date}
-                        mode="date"
-                        display="default"
-                        onChange={onDateChange}
-                        minimumDate={new Date()}
-                    />
-                )}
-
-                {showTimePicker && (
-                    <DateTimePicker
-                        value={date}
-                        mode="time"
-                        display="default"
-                        onChange={onTimeChange}
-                    />
-                )}
+                {renderDateTimePicker('date')}
+                {renderDateTimePicker('time')}
             </View>
 
             <View style={styles.formGroup}>
@@ -368,6 +413,44 @@ const styles = StyleSheet.create({
     },
     mapButtonText: {
         color: colors.text.light,
+        fontWeight: 'bold',
+    },
+    confirmButton: {
+        backgroundColor: colors.primary.green,
+        padding: spacing.sm,
+        borderRadius: borderRadius.md,
+        alignItems: 'center',
+        marginTop: spacing.sm,
+    },
+    confirmButtonText: {
+        color: colors.text.light,
+        fontWeight: 'bold',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    modalCancelText: {
+        fontSize: 16,
+        color: '#666',
+    },
+    modalDoneText: {
+        fontSize: 16,
+        color: colors.primary.green,
         fontWeight: 'bold',
     },
 });

@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS users (
     otp_code VARCHAR(6),
     otp_expires_at TIMESTAMP,
     is_verified BOOLEAN DEFAULT FALSE,
+    is_organizer_verified BOOLEAN DEFAULT FALSE, -- ADDED
+    verification_status VARCHAR(50) DEFAULT 'unverified' CHECK (verification_status IN ('unverified', 'pending', 'verified', 'rejected')), -- ADDED
+    wallet_balance DECIMAL(10, 2) DEFAULT 0.00, -- ADDED
     is_banned BOOLEAN DEFAULT FALSE,
     role VARCHAR(50) DEFAULT 'player' CHECK (role IN ('player', 'organizer', 'admin')),
     fcm_token TEXT, -- ADDED for Push Notifications
@@ -153,8 +156,25 @@ CREATE TABLE IF NOT EXISTS event_participants (
   event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   status VARCHAR(50) DEFAULT 'registered',
+  payment_status VARCHAR(50) DEFAULT 'pending' CHECK (payment_status IN ('pending', 'escrow', 'released', 'refunded', 'free')), -- ADDED
+  payment_amount DECIMAL(10, 2) DEFAULT 0.00, -- ADDED
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(event_id, user_id)
+);
+
+-- 12. NEW: Transactions Table
+CREATE TABLE IF NOT EXISTS transactions (
+    id SERIAL PRIMARY KEY,
+    sender_id INTEGER REFERENCES users(id),
+    recipient_id INTEGER REFERENCES users(id),
+    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+    amount DECIMAL(10, 2) NOT NULL,
+    fee_amount DECIMAL(10, 2) DEFAULT 0.00,
+    type VARCHAR(50) CHECK (type IN ('payment', 'payout', 'refund')),
+    status VARCHAR(50) DEFAULT 'escrow' CHECK (status IN ('escrow', 'released', 'refunded', 'failed')),
+    payout_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes for performance

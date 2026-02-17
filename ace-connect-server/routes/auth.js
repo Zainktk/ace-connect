@@ -100,7 +100,7 @@ router.post('/login', [
 
         // Find user
         const userResult = await pool.query(
-            'SELECT id, email, password_hash, is_verified, is_banned, role FROM users WHERE email = $1',
+            'SELECT id, email, password_hash, is_verified, is_banned, role, is_organizer_verified, wallet_balance FROM users WHERE email = $1',
             [email]
         );
 
@@ -165,7 +165,9 @@ router.post('/login', [
                 reviewCount: parseInt(profile?.review_count) || 0,
                 role: user.role || 'player',
                 latitude: profile?.latitude,
-                longitude: profile?.longitude
+                longitude: profile?.longitude,
+                isOrganizerVerified: user.is_organizer_verified,
+                walletBalance: parseFloat(user.wallet_balance) || 0
             }
         });
     } catch (error) {
@@ -283,7 +285,7 @@ router.get('/me', authMiddleware, async (req, res) => {
             `SELECT u.id, u.email, p.name, p.ntrp_rating, p.bio, p.location, p.photo_url, p.latitude, p.longitude,
              (SELECT AVG(rating)::FLOAT FROM match_reviews WHERE subject_id = u.id) as karma_rating,
              (SELECT COUNT(*) FROM match_reviews WHERE subject_id = u.id) as review_count,
-             u.role
+             u.role, u.is_organizer_verified, u.wallet_balance
              FROM users u
              LEFT JOIN profiles p ON u.id = p.user_id
              WHERE u.id = $1`,
@@ -309,7 +311,9 @@ router.get('/me', authMiddleware, async (req, res) => {
             reviewCount: parseInt(user.review_count) || 0,
             role: user.role || 'player',
             latitude: user.latitude,
-            longitude: user.longitude
+            longitude: user.longitude,
+            isOrganizerVerified: user.is_organizer_verified,
+            walletBalance: parseFloat(user.wallet_balance) || 0
         });
     } catch (error) {
         console.error('Get user error:', error);

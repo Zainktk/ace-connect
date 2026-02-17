@@ -21,6 +21,10 @@ const CONFIG = {
     GOOGLE_MAPS_API_KEY: 'AIzaSyCxYqMAuyWNJsIEBa9Q-8F9MrxKILy2tgk', // Replace if needed
 };
 
+// STRIPE - Replace with your real pk_test_... key when ready
+export const STRIPE_PUBLISHABLE_KEY = 'pk_test_51T1P9oGFO0HfANVikDYjMCCwwFTlGrtxqRGE7iFoFfJQbxg6TmlAAY0tUiPli3Q47cAr4iD8FgZZ7jbhp2EwEZRo00W55gHDJF';
+
+
 export const getApiUrl = () => {
     return CONFIG.ENV === 'prod' ? CONFIG.production.API_URL : CONFIG.development.API_URL;
 };

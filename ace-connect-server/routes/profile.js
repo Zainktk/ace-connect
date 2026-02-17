@@ -16,6 +16,7 @@ router.get('/:userId', async (req, res) => {
 
         const result = await pool.query(
             `SELECT u.id, u.email, p.name, p.ntrp_rating, p.bio, p.location, p.photo_url, p.latitude, p.longitude,
+             u.is_organizer_verified, u.wallet_balance,
              (SELECT AVG(rating)::FLOAT FROM match_reviews WHERE subject_id = u.id) as karma_rating,
              (SELECT COUNT(*) FROM match_reviews WHERE subject_id = u.id) as review_count
              FROM users u
@@ -42,7 +43,9 @@ router.get('/:userId', async (req, res) => {
             karmaRating: user.karma_rating || 5.0, // Default to 5.0
             reviewCount: parseInt(user.review_count) || 0,
             latitude: user.latitude,
-            longitude: user.longitude
+            longitude: user.longitude,
+            isOrganizerVerified: user.is_organizer_verified,
+            walletBalance: parseFloat(user.wallet_balance) || 0
         });
     } catch (error) {
         console.error('Get profile error:', error);

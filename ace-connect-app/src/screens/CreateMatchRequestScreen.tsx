@@ -14,6 +14,7 @@ import {
 import { colors, typography, spacing, borderRadius } from '../theme/index';
 import Geolocation from '@react-native-community/geolocation';
 import MapView, { Marker } from 'react-native-maps';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,9 +23,12 @@ const CreateMatchRequestScreen = ({ navigation }: any) => {
     const [loading, setLoading] = useState(false);
 
     const [matchType, setMatchType] = useState<'singles' | 'doubles'>('singles');
-    const [preferredDate, setPreferredDate] = useState('');
-    const [preferredTime, setPreferredTime] = useState('');
+    const [preferredDate, setPreferredDate] = useState<Date | null>(null);
+    const [preferredTime, setPreferredTime] = useState<Date | null>(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
     const [location, setLocation] = useState('');
+
     const getInitialSkill = (val: any, offset: number) => {
         const num = parseFloat(val);
         return isNaN(num) ? '' : (num + offset).toFixed(1);
@@ -50,8 +54,8 @@ const CreateMatchRequestScreen = ({ navigation }: any) => {
         try {
             await api.post('/matchmaking/requests', {
                 matchType,
-                preferredDate: preferredDate || null,
-                preferredTime: preferredTime || null,
+                preferredDate: preferredDate ? preferredDate.toISOString().split('T')[0] : null,
+                preferredTime: preferredTime ? preferredTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : null,
                 location: location.trim(),
                 skillLevelMin: skillLevelMin ? parseFloat(skillLevelMin) : null,
                 skillLevelMax: skillLevelMax ? parseFloat(skillLevelMax) : null,
@@ -72,9 +76,67 @@ const CreateMatchRequestScreen = ({ navigation }: any) => {
         }
     };
 
+    const renderDateTimePicker = (mode: 'date' | 'time') => {
+        const isOpen = mode === 'date' ? showDatePicker : showTimePicker;
+        const setOpen = mode === 'date' ? setShowDatePicker : setShowTimePicker;
+        const value = mode === 'date' ? (preferredDate || new Date()) : (preferredTime || new Date());
 
+        if (!isOpen) return null;
 
+        if (Platform.OS === 'ios') {
+            return (
+                <Modal
+                    transparent={true}
+                    animationType="slide"
+                    visible={isOpen}
+                    onRequestClose={() => setOpen(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <TouchableOpacity onPress={() => setOpen(false)}>
+                                    <Text style={styles.modalCancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setOpen(false)}>
+                                    <Text style={styles.modalDoneText}>Confirm</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <View style={{ backgroundColor: '#fff', height: 216 }}>
+                                <DateTimePicker
+                                    value={value}
+                                    mode={mode}
+                                    display="spinner"
+                                    onChange={(event, date) => {
+                                        if (date) {
+                                            if (mode === 'date') setPreferredDate(date);
+                                            else setPreferredTime(date);
+                                        }
+                                    }}
+                                    textColor="#000000"
+                                    style={{ height: 216, width: '100%' }}
+                                />
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+            );
+        }
 
+        return (
+            <DateTimePicker
+                value={value}
+                mode={mode}
+                display="default"
+                onChange={(event, date) => {
+                    setOpen(false);
+                    if (date) {
+                        if (mode === 'date') setPreferredDate(date);
+                        else setPreferredTime(date);
+                    }
+                }}
+            />
+        );
+    };
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -147,22 +209,27 @@ const CreateMatchRequestScreen = ({ navigation }: any) => {
 
             {/* Date & Time */}
             <Text style={styles.label}>Preferred Date (Optional)</Text>
-            <TextInput
+            <TouchableOpacity
                 style={styles.input}
-                placeholder="YYYY-MM-DD (e.g., 2026-02-15)"
-                placeholderTextColor={colors.text.muted}
-                value={preferredDate}
-                onChangeText={setPreferredDate}
-            />
+                onPress={() => setShowDatePicker(true)}
+            >
+                <Text style={{ color: preferredDate ? colors.text.primary : colors.text.muted }}>
+                    {preferredDate ? preferredDate.toLocaleDateString() : 'YYYY-MM-DD (e.g., 2026-02-15)'}
+                </Text>
+            </TouchableOpacity>
 
             <Text style={styles.label}>Preferred Time (Optional)</Text>
-            <TextInput
+            <TouchableOpacity
                 style={styles.input}
-                placeholder="HH:MM (e.g., 14:30)"
-                placeholderTextColor={colors.text.muted}
-                value={preferredTime}
-                onChangeText={setPreferredTime}
-            />
+                onPress={() => setShowTimePicker(true)}
+            >
+                <Text style={{ color: preferredTime ? colors.text.primary : colors.text.muted }}>
+                    {preferredTime ? preferredTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'HH:MM (e.g., 14:30)'}
+                </Text>
+            </TouchableOpacity>
+
+            {renderDateTimePicker('date')}
+            {renderDateTimePicker('time')}
 
             <Text style={styles.label}>Time Preference (Range)</Text>
             <View style={styles.timeRangeContainer}>
@@ -408,6 +475,33 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
 
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    modalCancelText: {
+        fontSize: 16,
+        color: '#666',
+    },
+    modalDoneText: {
+        fontSize: 16,
+        color: colors.primary.green,
+        fontWeight: 'bold',
+    },
 });
 
 export default CreateMatchRequestScreen;
