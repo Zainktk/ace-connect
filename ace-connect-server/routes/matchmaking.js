@@ -62,6 +62,77 @@ router.post('/requests', authMiddleware, [
 });
 
 /**
+ * @route   PUT /api/matchmaking/requests/:id
+ * @desc    Update a match request
+ * @access  Private
+ */
+router.put('/requests/:id', authMiddleware, [
+    body('matchType').optional().isIn(['singles', 'doubles']),
+    body('preferredDate').optional({ nullable: true }).isISO8601(),
+    body('preferredTime').optional({ nullable: true }).matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
+    body('location').optional({ nullable: true }).trim(),
+    body('skillLevelMin').optional({ nullable: true }).isFloat({ min: 1.0, max: 7.0 }),
+    body('skillLevelMax').optional({ nullable: true }).isFloat({ min: 1.0, max: 7.0 }),
+    body('notes').optional({ nullable: true }).trim()
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { id } = req.params;
+        const {
+            matchType,
+            preferredDate,
+            preferredTime,
+            location,
+            skillLevelMin,
+            skillLevelMax,
+            courtType,
+            preferredTimeRange,
+            latitude,
+            longitude,
+            notes
+        } = req.body;
+
+        const pool = req.app.get('db');
+
+        // Check ownership
+        const existing = await pool.query('SELECT * FROM match_requests WHERE id = $1 AND user_id = $2', [id, req.user.id]);
+        if (existing.rows.length === 0) {
+            return res.status(404).json({ error: 'Request not found or unauthorized' });
+        }
+
+        const result = await pool.query(
+            `UPDATE match_requests 
+             SET match_type = COALESCE($1, match_type),
+                 preferred_date = COALESCE($2, preferred_date),
+                 preferred_time = COALESCE($3, preferred_time),
+                 location = COALESCE($4, location),
+                 skill_level_min = COALESCE($5, skill_level_min),
+                 skill_level_max = COALESCE($6, skill_level_max),
+                 court_type = COALESCE($7, court_type),
+                 preferred_time_range = COALESCE($8, preferred_time_range),
+                 latitude = COALESCE($9, latitude),
+                 longitude = COALESCE($10, longitude),
+                 notes = COALESCE($11, notes),
+                 updated_at = NOW()
+             WHERE id = $12 AND user_id = $13
+             RETURNING *`,
+            [matchType, preferredDate, preferredTime, location,
+                skillLevelMin, skillLevelMax, courtType, preferredTimeRange,
+                latitude, longitude, notes, id, req.user.id]
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Update match request error:', error.message);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+/**
  * @route   GET /api/matchmaking/requests
  * @desc    Get available match requests (filtered and scored)
  * @access  Private
@@ -349,7 +420,7 @@ router.get('/invitations', authMiddleware, async (req, res) => {
              JOIN match_requests mr ON mi.match_request_id = mr.id
              JOIN users u ON mi.sender_id = u.id
              JOIN profiles p ON u.id = p.user_id
-             WHERE mi.recipient_id = $1
+             WHERE mi.recipient_id = $1 AND mi.status = 'pending'
              ORDER BY mi.created_at DESC`,
             [req.user.id]
         );
