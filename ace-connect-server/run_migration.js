@@ -25,10 +25,12 @@ async function runMigration() {
         const client = await pool.connect();
         console.log('Connected!');
 
-        const migrationPath = path.join(__dirname, 'db', 'migrations', '009_add_gamification_to_profiles.sql');
+        const argFile = process.argv[2];
+        const migrationFile = argFile || '009_add_gamification_to_profiles.sql';
+        const migrationPath = argFile ? path.resolve(process.cwd(), argFile) : path.join(__dirname, 'db', 'migrations', migrationFile);
         const migrationSql = fs.readFileSync(migrationPath, 'utf8');
 
-        console.log('Running migration: 005_create_events_table_local.sql...');
+        console.log(`Running migration: ${path.basename(migrationPath)}...`);
         await client.query(migrationSql);
         console.log('Migration completed successfully.');
 
