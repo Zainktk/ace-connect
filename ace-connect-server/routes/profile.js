@@ -18,7 +18,8 @@ router.get('/:userId', async (req, res) => {
             `SELECT u.id, u.email, p.name, p.ntrp_rating, p.bio, p.location, p.photo_url, p.latitude, p.longitude,
              u.is_organizer_verified, u.wallet_balance,
              (SELECT AVG(rating)::FLOAT FROM match_reviews WHERE subject_id = u.id) as karma_rating,
-             (SELECT COUNT(*) FROM match_reviews WHERE subject_id = u.id) as review_count
+             (SELECT COUNT(*) FROM match_reviews WHERE subject_id = u.id) as review_count,
+             p.xp, p.level, p.streak, p.achievements
              FROM users u
              LEFT JOIN profiles p ON u.id = p.user_id
              WHERE u.id = $1`,
@@ -44,7 +45,11 @@ router.get('/:userId', async (req, res) => {
             latitude: user.latitude,
             longitude: user.longitude,
             isOrganizerVerified: user.is_organizer_verified,
-            walletBalance: parseFloat(user.wallet_balance) || 0
+            walletBalance: parseFloat(user.wallet_balance) || 0,
+            xp: user.xp || 0,
+            level: user.level || 1,
+            streak: user.streak || 0,
+            achievements: user.achievements || []
         });
     } catch (error) {
         console.error('Get profile error:', error);
@@ -140,7 +145,11 @@ router.put('/', authMiddleware, [
             location: profile.location,
             photoUrl: profile.photo_url,
             latitude: profile.latitude,
-            longitude: profile.longitude
+            longitude: profile.longitude,
+            xp: profile.xp,
+            level: profile.level,
+            streak: profile.streak,
+            achievements: profile.achievements
         });
     } catch (error) {
         console.error('Update profile error:', error);

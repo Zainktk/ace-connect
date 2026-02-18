@@ -1,0 +1,6 @@
+-- Migration: Add gamification fields to profiles table
+ALTER TABLE profiles 
+ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1,
+ADD COLUMN IF NOT EXISTS streak INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS achievements JSONB DEFAULT '[]';
