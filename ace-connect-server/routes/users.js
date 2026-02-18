@@ -104,4 +104,29 @@ router.put('/fcm-token', authMiddleware, [
     }
 });
 
+/**
+ * @route   GET /api/users
+ * @desc    Get all players (except current user)
+ * @access  Private
+ */
+router.get('/', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.get('db');
+
+        const result = await pool.query(
+            `SELECT u.id, p.name, p.location, p.ntrp_rating, p.photo_url
+             FROM users u
+             JOIN profiles p ON u.id = p.user_id
+             WHERE u.id != $1
+             ORDER BY p.name ASC`,
+            [req.user.id]
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Get players error:', error.message);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 module.exports = router;

@@ -432,6 +432,7 @@ router.get('/invitations', authMiddleware, async (req, res) => {
     }
 });
 
+
 /**
  * @route   PUT /api/matchmaking/invitations/:id/accept
  * @desc    Accept match invitation
