@@ -159,7 +159,7 @@ router.get('/requests', authMiddleware, [
 
         // Get current user's profile
         const userProfile = await pool.query(
-            'SELECT ntrp_rating, location FROM profiles WHERE user_id = $1',
+            'SELECT ntrp_rating, location, latitude, longitude FROM profiles WHERE user_id = $1',
             [req.user.id]
         );
 

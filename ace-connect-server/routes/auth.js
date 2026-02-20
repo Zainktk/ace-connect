@@ -130,9 +130,15 @@ router.post('/login', [
             });
         }
 
-        // Get profile and karma
+        // Award Login XP (10 points)
+        await pool.query(
+            'UPDATE profiles SET xp = xp + 10 WHERE user_id = $1',
+            [user.id]
+        );
+
+        // Get profile and karma (AFTER UPDATE)
         const profileResult = await pool.query(
-            `SELECT p.name, p.ntrp_rating, p.bio, p.location, p.photo_url, p.latitude, p.longitude,
+            `SELECT p.name, p.ntrp_rating, p.bio, p.location, p.photo_url, p.latitude, p.longitude, p.xp, p.level, p.streak,
              (SELECT AVG(rating)::FLOAT FROM match_reviews WHERE subject_id = $1) as karma_rating,
              (SELECT COUNT(*) FROM match_reviews WHERE subject_id = $1) as review_count
              FROM profiles p WHERE p.user_id = $1`,
@@ -159,15 +165,15 @@ router.post('/login', [
                 location: profile?.location,
                 photoUrl: profile?.photo_url,
                 karmaRating: profile?.karma_rating || 5.0,
-                photoUrl: profile?.photo_url,
-                karmaRating: profile?.karma_rating || 5.0,
-                reviewCount: parseInt(profile?.review_count) || 0,
                 reviewCount: parseInt(profile?.review_count) || 0,
                 role: user.role || 'player',
                 latitude: profile?.latitude,
                 longitude: profile?.longitude,
                 isOrganizerVerified: user.is_organizer_verified,
-                walletBalance: parseFloat(user.wallet_balance) || 0
+                walletBalance: parseFloat(user.wallet_balance) || 0,
+                xp: profile?.xp || 0,
+                level: profile?.level || 1,
+                streak: profile?.streak || 0
             }
         });
     } catch (error) {
@@ -282,7 +288,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 
         // Get user, profile and karma
         const result = await pool.query(
-            `SELECT u.id, u.email, p.name, p.ntrp_rating, p.bio, p.location, p.photo_url, p.latitude, p.longitude,
+            `SELECT u.id, u.email, p.name, p.ntrp_rating, p.bio, p.location, p.photo_url, p.latitude, p.longitude, p.xp, p.level, p.streak,
              (SELECT AVG(rating)::FLOAT FROM match_reviews WHERE subject_id = u.id) as karma_rating,
              (SELECT COUNT(*) FROM match_reviews WHERE subject_id = u.id) as review_count,
              u.role, u.is_organizer_verified, u.wallet_balance
@@ -308,12 +314,14 @@ router.get('/me', authMiddleware, async (req, res) => {
             photoUrl: user.photo_url,
             karmaRating: user.karma_rating || 5.0,
             reviewCount: parseInt(user.review_count) || 0,
-            reviewCount: parseInt(user.review_count) || 0,
             role: user.role || 'player',
             latitude: user.latitude,
             longitude: user.longitude,
             isOrganizerVerified: user.is_organizer_verified,
-            walletBalance: parseFloat(user.wallet_balance) || 0
+            walletBalance: parseFloat(user.wallet_balance) || 0,
+            xp: user.xp || 0,
+            level: user.level || 1,
+            streak: user.streak || 0
         });
     } catch (error) {
         console.error('Get user error:', error);
