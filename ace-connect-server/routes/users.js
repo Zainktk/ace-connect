@@ -114,10 +114,11 @@ router.get('/', authMiddleware, async (req, res) => {
         const pool = req.app.get('db');
 
         const result = await pool.query(
-            `SELECT u.id, p.name, p.location, p.ntrp_rating, p.photo_url
+            `SELECT u.id, u.role, p.name, p.location, p.ntrp_rating as "ntrpRating", 
+                    p.photo_url as "photoUrl", p.level, p.xp
              FROM users u
              JOIN profiles p ON u.id = p.user_id
-             WHERE u.id != $1
+             WHERE u.id != $1 AND u.role = 'player'
              ORDER BY p.name ASC`,
             [req.user.id]
         );
