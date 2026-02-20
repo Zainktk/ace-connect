@@ -92,6 +92,7 @@ app.get('/', (req, res) => {
 const eventsRoutes = require('./routes/events');
 const paymentsRoutes = require('./routes/payments');
 const announcementsRoutes = require('./routes/announcements');
+const settingsRoutes = require('./routes/settings');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
@@ -100,6 +101,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/announcements', announcementsRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Socket.io Setup
 const http = require('http');
