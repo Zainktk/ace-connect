@@ -180,7 +180,9 @@ router.get('/requests', authMiddleware, [
         }
 
         let queryText = `
-            SELECT mr.*, p.name, p.ntrp_rating, p.location as user_location, u.email, u.is_verified ${distanceSelect}
+            SELECT mr.*, p.name, p.ntrp_rating, p.location as user_location, u.email, u.is_verified,
+            EXISTS(SELECT 1 FROM match_invitations mi WHERE mi.match_request_id = mr.id AND mi.sender_id = $1) as invitation_sent
+            ${distanceSelect}
             FROM match_requests mr
             JOIN users u ON mr.user_id = u.id
             JOIN profiles p ON u.id = p.user_id
